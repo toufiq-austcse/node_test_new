@@ -1,4 +1,4 @@
-import {In, Repository} from 'typeorm';
+import {In, Repository, MoreThan} from 'typeorm';
 import {Get, Injectable} from '@nestjs/common';
 import {InjectRepository} from '@nestjs/typeorm';
 import {Event} from './entities/event.entity';
@@ -178,6 +178,30 @@ export class EventsService {
        */
     @Get('futureevents')
     async getFutureEventWithWorkshops() {
-        throw new Error('TODO task 2');
+        let events = await this.eventRepository.find();
+        let eventIds = events.map(event => event.id);
+        let workshops = await this.workshopRepository.find({
+            where: {
+                eventId: In(eventIds),
+                start: MoreThan(new Date().toISOString())
+            }
+        });
+        for (let event of events) {
+            (event as any).workshops = workshops.filter(workshop => workshop.eventId === event.id);
+        }
+
+        events = events.filter(event => (event as any).workshops.length > 0);
+        return events;
+
+        // let queryBuilder = this.workshopRepository.createQueryBuilder('workshops');
+        // queryBuilder.where('workshops.start > :currentDate', {currentDate: new Date()})
+        //     .andWhere('eventId IN(:...ids)', {ids: eventIds})
+        //     .leftJoinAndMapOne('workshops.event', Event, 'event', 'workshops.eventId = event.id')
+        //
+        // let workShops = await queryBuilder.getMany();
+        // for (let event of events) {
+        //     (event as any).workshops = workShops.filter(workshop => (workshop as any).event.id === event.id);
+        // }
+        //  return workShops;
     }
 }
